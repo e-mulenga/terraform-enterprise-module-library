@@ -1,0 +1,30 @@
+# ============================================================
+# terraform-enterprise-module-library — .gitignore
+# ============================================================
+
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.auto.tfvars
+*.pem
+*.key
+*_rsa
+.aws/
+.tfsec/
+.checkov/
+*.sarif
+*.plan
+tfplan
+plan.tfplan
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+__pycache__/
+.venv/
+crash.log

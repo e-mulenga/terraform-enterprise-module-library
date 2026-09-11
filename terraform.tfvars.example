@@ -1,0 +1,23 @@
+# ============================================================
+# Terraform Enterprise Module Library — Example tfvars
+# ============================================================
+# Copy this file to terraform.tfvars and populate with real values.
+# NEVER commit terraform.tfvars — it is excluded by .gitignore.
+# Use this file as the template; all secret values come from
+# environment variables or GitHub Actions secrets.
+# ============================================================
+
+aws_region        = "af-south-1"
+environment       = "dev"
+organization_name = "acme-enterprise"
+owner             = "Platform Engineering"
+cost_center       = "PLAT001"
+
+# Set this to read account IDs and KMS keys from the Landing Zone state
+landing_zone_state_bucket = "acme-enterprise-terraform-state-prod"
+landing_zone_state_key    = "landing-zone/prod/terraform.tfstate"
+
+tags = {
+  Project   = "enterprise-cloud-platform"
+  Terraform = "true"
+}

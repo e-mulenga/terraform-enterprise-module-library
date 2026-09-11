@@ -1,0 +1,208 @@
+# ============================================================
+# GitHub Actions — Module Test & Validate (PR Gate)
+# ============================================================
+# Runs on every PR targeting main:
+#   - tfsec security scan on all modules
+#   - checkov IaC scan on all modules
+#   - terraform validate on all modules
+#   - terraform fmt check
+#   - gitleaks secret scan
+# ============================================================
+
+name: Module Test & Validate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "modules/**"
+      - "examples/**"
+      - "provider.tf"
+      - "variables.tf"
+      - ".github/workflows/module-test.yml"
+
+  push:
+    branches: [main]
+    paths:
+      - "modules/**"
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+env:
+  TF_VERSION: "1.7.5"
+
+jobs:
+  # ---- Secret Detection (runs first — fastest gate) ---------
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+  # ---- Code Quality ------------------------------------------
+  format-lint:
+    name: Format & Lint
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive -diff
+        working-directory: .
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Init TFLint
+        run: tflint --init
+
+      - name: Run TFLint on all modules
+        run: |
+          for MODULE in modules/*/; do
+            echo "=== Linting ${MODULE} ==="
+            tflint --chdir="${MODULE}" --format compact
+          done
+
+  # ---- Security Scan -----------------------------------------
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: tfsec — all modules
+        uses: aquasecurity/tfsec-sarif-action@v1
+        with:
+          working_directory: modules
+          sarif_file: tfsec.sarif
+          soft_fail: false
+          additional_args: "--minimum-severity HIGH"
+
+      - name: Upload tfsec SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: tfsec.sarif
+          category: tfsec
+
+      - name: checkov — all modules
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: modules
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov.sarif
+          soft_fail: false
+
+      - name: Upload checkov SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+          category: checkov
+
+  # ---- Terraform Validate (each module independently) --------
+  validate-modules:
+    name: Validate — ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    needs: format-lint
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - vpc
+          - iam
+          - kms
+          - s3
+          - cloudtrail
+          - guardduty
+          - security-hub
+          - alb
+          - rds
+          - eks
+          - lambda
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+
+      - name: Init — ${{ matrix.module }}
+        run: terraform init -backend=false -input=false
+        working-directory: modules/${{ matrix.module }}
+
+      - name: Validate — ${{ matrix.module }}
+        run: terraform validate
+        working-directory: modules/${{ matrix.module }}
+
+  # ---- Validate Examples ------------------------------------
+  validate-examples:
+    name: Validate Example — ${{ matrix.env }}
+    runs-on: ubuntu-latest
+    needs: validate-modules
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, test, prod]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+
+      - name: Init — ${{ matrix.env }}
+        run: terraform init -backend=false -input=false
+        working-directory: examples/${{ matrix.env }}
+
+      - name: Validate — ${{ matrix.env }}
+        run: terraform validate
+        working-directory: examples/${{ matrix.env }}
+
+  # ---- PR Comment Summary ------------------------------------
+  comment-summary:
+    name: Post Summary
+    runs-on: ubuntu-latest
+    needs: [security-scan, validate-modules, validate-examples]
+    if: github.event_name == 'pull_request' && always()
+    steps:
+      - name: Comment result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const needs = ${{ toJSON(needs) }};
+            const allPassed = Object.values(needs).every(j => j.result === 'success');
+            const icon = allPassed ? '✅' : '❌';
+            const rows = Object.entries(needs)
+              .map(([name, job]) => `| ${name} | ${job.result === 'success' ? '✅ Pass' : '❌ Fail'} |`)
+              .join('\n');
+            const body = [
+              `## ${icon} Module Library Validation — PR #${{ github.event.number }}`,
+              '',
+              '| Job | Status |',
+              '|---|---|',
+              rows,
+              '',
+              `> Commit: \`${{ github.sha }}\``,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

@@ -1,0 +1,152 @@
+# ============================================================
+# GitHub Actions — Module Library Release
+# ============================================================
+# Triggered on merge to main.
+# Creates a semantic version Git tag based on PR labels:
+#
+#   Label             Version bump
+#   ─────────────     ────────────
+#   breaking-change   MAJOR (v2.x.x → v3.0.0)
+#   enhancement       MINOR (v2.1.x → v2.2.0)
+#   bug / fix         PATCH (v2.1.0 → v2.1.1)
+#
+# After tagging, posts a release summary linking all
+# downstream repos that must update their ?ref= pin.
+# ============================================================
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    name: Tag & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for versioning)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get latest tag
+        id: latest_tag
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Latest tag: ${TAG}"
+
+      - name: Determine version bump from PR labels
+        id: bump_type
+        if: github.event_name == 'push'
+        run: |
+          # Get the merged PR number from the commit message
+          PR_NUM=$(git log -1 --format='%s' | grep -oP '#\K[0-9]+' || echo "")
+          BUMP="patch"   # default
+          if [[ -n "${PR_NUM}" ]]; then
+            LABELS=$(gh pr view "${PR_NUM}" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+            if echo "${LABELS}" | grep -q "breaking-change"; then BUMP="major"; fi
+            if echo "${LABELS}" | grep -q "enhancement";    then BUMP="minor"; fi
+          fi
+          echo "bump=${BUMP}" >> $GITHUB_OUTPUT
+          echo "Version bump: ${BUMP}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          LATEST="${{ steps.latest_tag.outputs.tag }}"
+          BUMP="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version_type || steps.bump_type.outputs.bump }}"
+
+          # Strip 'v' prefix
+          VERSION="${LATEST#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION}"
+
+          case "${BUMP}" in
+            major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH+1)) ;;
+          esac
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "new_tag=${NEW_TAG}" >> $GITHUB_OUTPUT
+          echo "bump_type=${BUMP}" >> $GITHUB_OUTPUT
+          echo "New version: ${NEW_TAG} (${BUMP} bump from ${LATEST})"
+
+      - name: Create & push tag
+        run: |
+          NEW_TAG="${{ steps.new_version.outputs.new_tag }}"
+          git tag -a "${NEW_TAG}" -m "Release ${NEW_TAG}
+
+          Automated release from commit ${{ github.sha }}
+          Bump type: ${{ steps.new_version.outputs.bump_type }}
+
+          Downstream repos — update your module source ref:
+            ?ref=${NEW_TAG}
+          "
+          git push origin "${NEW_TAG}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV="${{ steps.latest_tag.outputs.tag }}"
+          NEW="${{ steps.new_version.outputs.new_tag }}"
+          CHANGES=$(git log "${PREV}..HEAD" --oneline --no-merges 2>/dev/null || echo "Initial release")
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          echo "${CHANGES}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.new_version.outputs.new_tag }}
+          name: "Release ${{ steps.new_version.outputs.new_tag }}"
+          generate_release_notes: true
+          body: |
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.changes }}
+
+            ---
+
+            ## Downstream Repos — Update Required
+
+            Update your module `source` references to pin to this release:
+
+            ```hcl
+            module "vpc" {
+              source = "git::https://github.com/${{ github.repository }}.git//modules/vpc?ref=${{ steps.new_version.outputs.new_tag }}"
+            }
+            ```
+
+            ### Repositories to update
+
+            | Repository | Action |
+            |---|---|
+            | [aws-devsecops-pipeline](https://github.com/your-org/aws-devsecops-pipeline) | Update `?ref=` in module sources |
+            | [aws-cloud-security-operations-center](https://github.com/your-org/aws-cloud-security-operations-center) | Update `?ref=` in module sources |
+            | [aws-secure-eks-platform](https://github.com/your-org/aws-secure-eks-platform) | Update `?ref=` in module sources |
+            | [multi-cloud-governance](https://github.com/your-org/multi-cloud-governance) | Update `?ref=` in module sources |
+
+            > **Breaking changes** require a migration guide in `CHANGELOG.md` before updating downstream refs.
