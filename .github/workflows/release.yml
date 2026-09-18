@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout (full history for versioning)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -118,7 +118,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.1.0
         with:
           tag_name: ${{ steps.new_version.outputs.new_tag }}
           name: "Release ${{ steps.new_version.outputs.new_tag }}"
