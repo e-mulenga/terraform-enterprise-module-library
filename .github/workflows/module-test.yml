@@ -46,7 +46,7 @@ jobs:
         env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         continue-on-error: true
 
-  # ---- Code Quality ------------------------------------------
+  # ---- Code Quality & Security Scan --------------------------
   format-lint:
     name: Format & Lint
     runs-on: ubuntu-latest
