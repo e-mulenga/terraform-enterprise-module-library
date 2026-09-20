@@ -39,7 +39,7 @@
 
 The **Terraform Enterprise Module Library** is a collection of production-grade, security-hardened, reusable Terraform modules that serve as the foundational building blocks for every workload in the Enterprise Cloud Platform Portfolio. Rather than copying configuration between projects, every platform engineer references these modules — ensuring consistent security defaults, naming conventions, encryption, and tagging across hundreds of resources.
 
-This library is **position 2 of 6** in the portfolio — built on the account structure and security baselines established by the [AWS Enterprise Landing Zone](https://github.com/your-org/aws-enterprise-landing-zone-terraform), and consumed directly by the DevSecOps Pipeline, Secure EKS Platform, and Cloud Security Operations Centre.
+This library is **position 2 of 6** in the portfolio — built on the account structure and security baselines established by the [AWS Enterprise Landing Zone](https://github.com/e-mulenga/aws-enterprise-landing-zone-terraform), and consumed directly by the DevSecOps Pipeline, Secure EKS Platform, and Cloud Security Operations Centre.
 
 **11 modules available:**
 
@@ -109,13 +109,13 @@ Modules are versioned using Git tags following semantic versioning:
 ```hcl
 # ✅ Correct — pinned version in all non-library repos
 module "vpc" {
-  source  = "git::https://github.com/your-org/terraform-enterprise-module-library.git//modules/vpc?ref=v2.1.0"
+  source  = "git::https://github.com/e-mulenga/terraform-enterprise-module-library.git//modules/vpc?ref=v2.1.0"
   ...
 }
 
 # ❌ Wrong — HEAD reference causes unpredictable changes
 module "vpc" {
-  source = "git::https://github.com/your-org/terraform-enterprise-module-library.git//modules/vpc"
+  source = "git::https://github.com/e-mulenga/terraform-enterprise-module-library.git//modules/vpc"
 }
 ```
 
@@ -219,7 +219,7 @@ flowchart TD
 | **Type** | Module Library |
 | **Deployment order** | After `aws-enterprise-landing-zone` |
 
-**Depends on:** [`aws-enterprise-landing-zone`](https://github.com/your-org/aws-enterprise-landing-zone-terraform)
+**Depends on:** [`aws-enterprise-landing-zone`](https://github.com/e-mulenga/aws-enterprise-landing-zone-terraform)
 
 **Consumes from Landing Zone:**
 - Organisation ID (for org-level Config rules)
@@ -396,7 +396,7 @@ Every module follows these invariants:
 
 module "vpc" {
   # Pin to a specific version tag — never use HEAD
-  source = "git::https://github.com/your-org/terraform-enterprise-module-library.git//modules/vpc?ref=v2.1.0"
+  source = "git::https://github.com/e-mulenga/terraform-enterprise-module-library.git//modules/vpc?ref=v2.1.0"
 
   organization_name      = var.organization_name
   environment            = var.environment
@@ -407,7 +407,7 @@ module "vpc" {
 }
 
 module "app_bucket" {
-  source = "git::https://github.com/your-org/terraform-enterprise-module-library.git//modules/s3?ref=v2.1.0"
+  source = "git::https://github.com/e-mulenga/terraform-enterprise-module-library.git//modules/s3?ref=v2.1.0"
 
   bucket_name  = "${var.organization_name}-${var.environment}-app"
   kms_key_arn  = data.terraform_remote_state.landing_zone.outputs.kms_cloudtrail_key_arn
@@ -701,12 +701,12 @@ flowchart TD
 
 | Repository | Relationship | My Modules Used |
 |---|---|---|
-| **[aws-enterprise-landing-zone](https://github.com/your-org/aws-enterprise-landing-zone-terraform)** | **Upstream — provides account IDs, KMS ARNs** | Provides KMS, S3, CloudTrail baseline |
-| **[terraform-enterprise-module-library](https://github.com/your-org/terraform-enterprise-module-library)** | **YOU ARE HERE** | All 11 modules |
-| **[aws-devsecops-pipeline](https://github.com/your-org/aws-devsecops-pipeline)** | **Downstream — consumes vpc, iam, s3, rds** | vpc, iam, s3, rds, lambda |
-| **[aws-cloud-security-operations-center](https://github.com/your-org/aws-cloud-security-operations-center)** | **Downstream — consumes kms, guardduty, security-hub** | kms, guardduty, security-hub, s3 |
-| **[aws-secure-eks-platform](https://github.com/your-org/aws-secure-eks-platform)** | **Downstream — consumes vpc, eks, rds, alb** | vpc, eks, rds, alb, iam, kms, s3 |
-| **[multi-cloud-governance](https://github.com/your-org/multi-cloud-governance)** | **Downstream — aggregates posture** | security-hub, cloudtrail |
+| **[aws-enterprise-landing-zone](https://github.com/e-mulenga/aws-enterprise-landing-zone-terraform)** | **Upstream — provides account IDs, KMS ARNs** | Provides KMS, S3, CloudTrail baseline |
+| **[terraform-enterprise-module-library](https://github.com/e-mulenga/terraform-enterprise-module-library)** | **YOU ARE HERE** | All 11 modules |
+| **[aws-devsecops-pipeline](https://github.com/e-mulenga/aws-devsecops-pipeline)** | **Downstream — consumes vpc, iam, s3, rds** | vpc, iam, s3, rds, lambda |
+| **[aws-cloud-security-operations-center](https://github.com/e-mulenga/aws-cloud-security-operations-center)** | **Downstream — consumes kms, guardduty, security-hub** | kms, guardduty, security-hub, s3 |
+| **[aws-secure-eks-platform](https://github.com/e-mulenga/aws-secure-eks-platform)** | **Downstream — consumes vpc, eks, rds, alb** | vpc, eks, rds, alb, iam, kms, s3 |
+| **[multi-cloud-governance](https://github.com/e-mulenga/multi-cloud-governance)** | **Downstream — aggregates posture** | security-hub, cloudtrail |
 
 ---
 
