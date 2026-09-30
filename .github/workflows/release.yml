@@ -144,9 +144,9 @@ jobs:
 
             | Repository | Action |
             |---|---|
-            | [aws-devsecops-pipeline](https://github.com/your-org/aws-devsecops-pipeline) | Update `?ref=` in module sources |
-            | [aws-cloud-security-operations-center](https://github.com/your-org/aws-cloud-security-operations-center) | Update `?ref=` in module sources |
-            | [aws-secure-eks-platform](https://github.com/your-org/aws-secure-eks-platform) | Update `?ref=` in module sources |
-            | [multi-cloud-governance](https://github.com/your-org/multi-cloud-governance) | Update `?ref=` in module sources |
+            | [aws-devsecops-pipeline](https://github.com/e-mulenga/aws-devsecops-pipeline) | Update `?ref=` in module sources |
+            | [aws-cloud-security-operations-center](https://github.com/e-mulenga/aws-cloud-security-operations-center) | Update `?ref=` in module sources |
+            | [aws-secure-eks-platform](https://github.com/e-mulenga/aws-secure-eks-platform) | Update `?ref=` in module sources |
+            | [multi-cloud-governance](https://github.com/e-mulenga/multi-cloud-governance) | Update `?ref=` in module sources |
 
             > **Breaking changes** require a migration guide in `CHANGELOG.md` before updating downstream refs.

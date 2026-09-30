@@ -63,3 +63,9 @@ variable "tags" {
   description = "Additional tags merged with the provider default_tags."
   default     = {}
 }
+
+variable "kms_key_arn" {
+  type        = string
+  description = "KMS key ARN from the Landing Zone for encrypting pipeline artifacts."
+  sensitive   = true
+}
