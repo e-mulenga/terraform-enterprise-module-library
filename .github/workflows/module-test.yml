@@ -40,17 +40,18 @@ jobs:
     name: Secret Detection
     runs-on: ubuntu-latest
     steps:
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+         node-version: '24'
+    
       - uses: actions/checkout@v4.2.2
         with: { fetch-depth: 0 }
       - uses: gitleaks/gitleaks-action@v2.3.9
         env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         continue-on-error: true
-
-        - name: Set up Node.js 24
-        uses: actions/setup-node@v4
-        with:
-         node-version: '24'
-         
+        
   # ---- Code Quality & Security Scan --------------------------
   format-lint:
     name: Format & Lint
