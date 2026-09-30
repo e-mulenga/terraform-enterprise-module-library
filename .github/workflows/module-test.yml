@@ -46,6 +46,11 @@ jobs:
         env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         continue-on-error: true
 
+        - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+         node-version: '24'
+         
   # ---- Code Quality & Security Scan --------------------------
   format-lint:
     name: Format & Lint
@@ -54,6 +59,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+         node-version: '24'
+         
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@master
         with:
@@ -95,6 +105,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+         node-version: '24'
+         
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3.1.2
         with: { terraform_version: "${{ env.TF_VERSION }}" }
@@ -119,7 +134,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.2.2
-
+        
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+         node-version: '24'
+         
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3.1.2
         with: { terraform_version: "${{ env.TF_VERSION }}" }
@@ -145,7 +165,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
          node-version: '24'
-         
+
       - name: Comment result
         uses: actions/github-script@v7.0.1
         with:
